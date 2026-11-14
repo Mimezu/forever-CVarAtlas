@@ -47,7 +47,47 @@ local function Dump()
 		entries = entries,
 	}
 	print(("|cff60c0ffCVarAtlas:|r captured %d entries (%d CVars). /reload to write the file."):format(#entries, cvars))
+	if CVarAtlas_RefreshPanel then CVarAtlas_RefreshPanel() end
 end
 
 SLASH_CVARATLAS1 = "/cvaratlas"
 SlashCmdList.CVARATLAS = Dump
+
+-- Page in Esc > Options > AddOns: Dump button, slash hint, last capture.
+local function RegisterInSettings()
+	if not (Settings and Settings.RegisterCanvasLayoutCategory and Settings.RegisterAddOnCategory) then return end
+	local panel = CreateFrame("Frame")
+	local heading = panel:CreateFontString(nil, "ARTWORK", "GameFontNormalLarge")
+	heading:SetPoint("TOPLEFT", 16, -16)
+	heading:SetText("CVar Atlas")
+	local dump = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
+	dump:SetSize(140, 26)
+	dump:SetPoint("TOPLEFT", heading, "BOTTOMLEFT", 0, -14)
+	dump:SetText("Dump")
+	dump:SetScript("OnClick", Dump)
+	local hint = panel:CreateFontString(nil, "ARTWORK", "GameFontDisable")
+	hint:SetPoint("LEFT", dump, "RIGHT", 12, 0)
+	hint:SetText("/cvaratlas")
+	local last = panel:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
+	last:SetPoint("TOPLEFT", dump, "BOTTOMLEFT", 0, -12)
+	local note = panel:CreateFontString(nil, "ARTWORK", "GameFontDisableSmall")
+	note:SetPoint("TOPLEFT", last, "BOTTOMLEFT", 0, -6)
+	note:SetText("Saved on /reload or logout.")
+	function CVarAtlas_RefreshPanel()
+		local db = CVarAtlasDB
+		if db and db.entries then
+			last:SetFormattedText("Last: %s · %d entries", db.date or "?", #db.entries)
+		else
+			last:SetText("No capture yet")
+		end
+	end
+	panel:SetScript("OnShow", CVarAtlas_RefreshPanel)
+	local category = Settings.RegisterCanvasLayoutCategory(panel, "CVar Atlas")
+	Settings.RegisterAddOnCategory(category)
+end
+
+local loader = CreateFrame("Frame")
+loader:RegisterEvent("PLAYER_LOGIN")
+loader:SetScript("OnEvent", function()
+	pcall(RegisterInSettings)
+end)
